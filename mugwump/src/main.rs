@@ -1,9 +1,76 @@
 use std::fmt;
 use std::io;
 use std::io::Write;
+use std::ops::Index;
+use std::ops::IndexMut;
 
 extern crate rand;
 use rand::Rng;
+
+#[derive(Clone, PartialEq)]
+enum Cell {
+    Unguessed,
+    Correct,
+    Incorrect,
+}
+
+struct Board {
+    cells: Vec<Cell>,
+    width: usize,   // X
+    height: usize,  // Y
+}
+
+impl Board{
+    fn new(width: usize, height: usize) -> Self {
+        Board {
+            cells: vec![Cell::Unguessed; width * height],
+            width,
+            height,
+        }
+    }
+    fn update(&mut self, guess_x: usize, guess_y: usize, is_correct: bool) {
+        println!("your x guess is {0}, and your y guess is {1}", guess_x, guess_y);
+        if is_correct {
+            self.cells[guess_y *  self.width + guess_x] = Cell::Correct;
+        } else {
+            self.cells[guess_y *  self.width + guess_x] = Cell::Incorrect;
+        }
+    }
+}
+
+impl Index<(usize, usize)> for Board {
+    type Output = Cell;
+    fn index(&self, (x, y): (usize, usize)) -> &Self::Output {
+        &self.cells[y * self.width + x]
+    }
+}
+
+impl IndexMut<(usize, usize)> for Board {
+    fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut Self::Output {
+        &mut self.cells[y * self.width + x]
+    }
+}
+
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = String::with_capacity(self.height * self.width + self.height);
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let cell = &self[(x, y)]; // Dereference the reference
+                if *cell == Cell::Unguessed {
+                    s += "*";
+                } else if *cell == Cell::Correct {
+                    s += "O";
+                } else {
+                    s += "X";
+                }
+            }
+            s += "\n";
+        }
+        write!(f, "{}", s) // Return a Result
+    }
+}
+
 
 #[derive(PartialEq)]
 struct Location {
@@ -64,6 +131,9 @@ fn game() {
         Location::rand(),
         Location::rand(),
     ];
+    let mut b = Board::new(10,10);
+
+    println!("\n{}", b);
 
     let mut turn = 0;
     loop {
@@ -71,17 +141,29 @@ fn game() {
         let guess = guess(turn);
 
         let mut mugwumps_remaining = mugwumps.len();
-        for (i, mut m) in mugwumps.iter_mut().enumerate() {
+        let mut correct_num : usize = 0;
+        for (i, m) in mugwumps.iter_mut().enumerate() {
             if guess == *m {
+                correct_num += 1;
                 m.x = -m.x;
                 println!("You have found Mugwump {}", i + 1)
+
             }
+            
             if m.x < 0.0 {
                 mugwumps_remaining -= 1;
                 continue;
             }
             println!("You are {:.1} units from Mugwump {}", guess.dist(m), i + 1);
         }
+        if correct_num > 0 {
+            Board::update(&mut b, guess.x as usize, guess.y as usize, true);
+        } else {
+            Board::update(&mut b, guess.x as usize, guess.y as usize, false);
+
+        }
+        println!("Here is the updated board!\n\n{}", b);
+
         if mugwumps_remaining == 0 {
             println!();
             println!("You got them all in {} turns!", turn);
@@ -102,7 +184,7 @@ fn game() {
 }
 
 fn guess(turn: u32) -> Location {
-    println!();
+    println!("\n");
     loop {
         print!("Turn no. {} what is your guess? ", turn);
         io::stdout().flush().unwrap();
@@ -114,10 +196,18 @@ fn guess(turn: u32) -> Location {
         if vec.len() == 2 {
             if let Ok(x) = vec[0].trim().parse::<f32>() {
                 if let Ok(y) = vec[1].trim().parse::<f32>() {
-                    return Location::from(x, y);
+                    if x > 9.0 || y > 9.0 {
+                        println!{"Outise board range, guess again"}
+                    }
+                    else {
+                        return Location::from(x, y);
+                    }
                 }
             }
         }
-        println!("Expected digit-comma-digit e.g. 0,9");
+        else {
+            println!("Expected digit-comma-digit e.g. 0,9");
+        }
     }
 }
+
