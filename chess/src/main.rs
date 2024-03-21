@@ -1,129 +1,284 @@
 use std::fmt;
 use std::io;
 use std::io::Write;
-use std::ops::Index;
-use std::ops::IndexMut;
+//use std::ops::Index;
+//use std::ops::IndexMut;
 
-#[derive(Clone, PartialEq)] //i don't quite understand this
-enum Square {
-    Empty,
-    Occupied,
-}
-#[derive(Clone, PartialEq)] //i don't quite understand this
-
-enum Colors {
-    White,
-    Black,
-}
-#[derive(Clone, PartialEq)] //i don't quite understand this
-
-enum Piece_Types {
-    Pawn,
+#[derive(Clone, Copy)]
+enum PieceTypes {
     King,
     Queen,
     Rook,
     Bishop,
-    Knight
+    Knight,
+    Pawn,
 }
 
+#[derive(Clone, Copy)]
+enum Color {
+    Black,
+    White,
+}
+
+#[derive(Clone, Copy)]
 struct Piece {
-    color: Vec<Colors>,
-    p_type: Vec<Piece_Types>,
-    //location: Location,
-}
-
-struct Board {
-    squares: Vec<Square>,
-    width: usize,   // X
-    height: usize,  // Y
-}
-
-impl Board{
-    // First, make an empty board
-    fn new(width: usize, height: usize) -> Self {
-        Board{
-            squares: vec![Square::Empty; width * height],
-            width,
-            height,
-        }
-    }
-    fn set(&mut self) {
-        //top of board
-        for y in 0..2 {
-            for x in 0..self.width {
-                self.squares[y * self.width + x] = Square::Occupied;
-            }
-        }
-    }
-}
-
-impl Index<(usize, usize)> for Board {
-    type Output = Square; //don't understand
-    fn index(&self, (x,y): (usize, usize)) -> &Self::Output {
-        &self.squares[y * self.width + x] // how does this work?
-    }
-}
-
-impl IndexMut<(usize, usize)> for Board {
-    fn index_mut(&mut self, (x, y): (usize, usize)) -> &mut Self::Output {
-        &mut self.squares[y * self.width + x] // I think I get this now
-        // this is a really weird way of storing a 2d array in a 1d vector... wow
-    }
-}
-
-impl fmt::Display for Board {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut s = String::with_capacity(4*(self.height*self.width + self.height)); // the 4 times is to add other stuff
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let square = &self[(x , y)];
-                s += "|";
-                if *square == Square::Empty {
-                    s += "*";
-                } else if *square == Square::Occupied {
-                    s += "_";
-                }
-            }
-            s += "|\n-----------------\n";
-        }
-        write!(f, "{}", s) // Returns this
-    }
+    piece_type: PieceTypes,
+    color: Color,
 }
 
 struct Location {
+    x: usize,
+    y: usize,
+}
+impl Location {
+    fn from(x: usize, y: usize) -> Self {
+        Location { x , y }
+    }
+}
+
+struct ChessMove {
     start:  String,
     end:    String,
 }
 
-impl Location {
+impl ChessMove {
     fn from(start: String, end: String) ->Self {
-        Location { start, end }
+        ChessMove { start, end }
     }
 }
 
 
-fn main() {
-    println!("Hello, world!");
-    loop {
-        game();
+#[derive(Clone, Copy)]
+enum Square {
+    Empty,
+    Occupied(Piece),
+    //Location,
+}
+
+struct Board{
+    squares: [[Square; 8]; 8],
+}
+
+impl Board{
+    fn empty_board() -> Self {
+        Self { squares : [[Square::Empty; 8]; 8]}
     }
+    fn place_piece(&mut self, piece: Piece, location: Location){
+        if location.x < 8 && location.y < 8 {
+            self.squares[location.x][location.y] = Square::Occupied(piece);
+        } else {
+            println!("Error: location out of bounds");
+        }
+    }
+    fn set_board(&mut self){
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Rook, 
+                color: Color::White }, 
+            Location::from(0, 0)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Rook, 
+                color: Color::White }, 
+            Location::from(7, 0)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Knight, 
+                color: Color::White }, 
+            Location::from(1, 0)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Knight, 
+                color: Color::White }, 
+            Location::from(6, 0)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Bishop, 
+                color: Color::White }, 
+            Location::from(2, 0)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Bishop, 
+                color: Color::White }, 
+            Location::from(5, 0)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::King, 
+                color: Color::White }, 
+            Location::from(4, 0)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Queen, 
+                color: Color::White }, 
+            Location::from(3, 0)
+        );
+
+        for i in 0..8{
+            self.place_piece(
+                Piece { 
+                    piece_type: PieceTypes::Pawn, 
+                    color: Color::White }, 
+                Location::from(i, 1)
+            );
+        }
+
+
+
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Rook, 
+                color: Color::Black }, 
+            Location::from(0, 7)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Rook, 
+                color: Color::Black }, 
+            Location::from(7, 7)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Knight, 
+                color: Color::Black }, 
+            Location::from(1, 7)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Knight, 
+                color: Color::Black }, 
+            Location::from(6, 7)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Bishop, 
+                color: Color::Black }, 
+            Location::from(2, 7)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Bishop, 
+                color: Color::Black }, 
+            Location::from(5, 7)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::King, 
+                color: Color::Black }, 
+            Location::from(4, 7)
+        );
+        self.place_piece(
+            Piece { 
+                piece_type: PieceTypes::Queen, 
+                color: Color::Black }, 
+            Location::from(3, 7)
+        );
+
+        for i in 0..8{
+            self.place_piece(
+                Piece { 
+                    piece_type: PieceTypes::Pawn, 
+                    color: Color::Black }, 
+                Location::from(i, 6)
+            );
+        }
+    }
+
+}
+
+
+impl fmt::Display for Board {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = String::new();
+        for y in 0..8 {
+            s += &format!("{}", y + 1);
+            for x in 0..8 {
+                let square = self.squares[x][y];
+                s += "|";
+                match square {
+                    Square::Empty => s += " ",
+                    Square::Occupied(piece) => {
+                        match piece.color {
+                            Color::Black => {
+                                match piece.piece_type {
+                                    PieceTypes::King => s += "K",
+                                    PieceTypes::Rook => s += "R",
+                                    PieceTypes::Bishop => s += "B",
+                                    PieceTypes::Knight => s += "N",
+                                    PieceTypes::Queen => s += "Q",
+                                    PieceTypes::Pawn => s += "P",
+                                }
+                            }
+                            Color::White => {
+                                match piece.piece_type {
+                                    PieceTypes::King => s += "k",
+                                    PieceTypes::Rook => s += "r",
+                                    PieceTypes::Bishop => s += "b",
+                                    PieceTypes::Knight => s += "n",
+                                    PieceTypes::Queen => s += "q",
+                                    PieceTypes::Pawn => s += "p",
+                                }
+                            }
+                        }
+                        
+                    }
+                    Square::Occupied(_) => s += "_", // assuming you want to display occupied squares as "_"
+                }
+            }
+            s += "|\n -----------------\n";
+        }
+        s += "  a b c d e f g h";
+        write!(f, "{}", s)
+    }
+}
+
+/*
+struct ChessMove {
+    start:  String,
+    end:    String,
+}
+
+impl ChessMove {
+    fn from(start: String, end: String) ->Self {
+        ChessMove { start, end }
+    }
+}
+*/
+
+fn main() {
+    game();
+
 }
 
 fn game() {
-    let mut b = Board::new(8,8);
-    println!("\n{}", b);
 
-    let mut turn = 0;
-    loop {
+    let mut b = Board::empty_board();
+    b.set_board();
+    let mut turn = 1;
+    loop{
+        println!("{}", b);
+        let whos_turn = turn % 2;
+        let mut turn_color = "white";
+        match whos_turn {
+            0 => turn_color = "white",
+            _ => turn_color = "black",
+
+        }
+        println!("{} to move!", turn_color);
+        let chess_move = get_move();
+        
         turn += 1;
-        let my_move = get_move(turn);
-        println!("{}", my_move.start);
-        println!("\n{}", b);
-        Board::set(&mut b);
     }
+    
 }
 
-fn get_move(turn: u32) -> Location {
+fn get_move() -> ChessMove {
     println!("]\n");
     loop {
         println!("enter move");
@@ -139,7 +294,7 @@ fn get_move(turn: u32) -> Location {
             if let Ok(start) = vec[0].trim().parse::<String>() {
                 if let Ok(end) = vec[1].trim().parse::<String>() {
                     if end.len() == 2 && start.len() == 2{
-                        return Location::from(start, end);
+                        return ChessMove::from(start, end);
                     } else { println!("only 2 letters you goomba!");}
                 }
             }
