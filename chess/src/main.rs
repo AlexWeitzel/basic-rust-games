@@ -14,13 +14,11 @@ enum PieceTypes {
     Knight,
     Pawn,
 }
-
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 enum Color {
     Black,
     White,
 }
-
 #[derive(Clone, Copy)]
 struct Piece {
     piece_type: PieceTypes,
@@ -36,25 +34,22 @@ impl Location {
         Location { x , y }
     }
 }
-
 struct ChessMove {
     start:  String,
     end:    String,
 }
-
 impl ChessMove {
     fn from(start: String, end: String) ->Self {
         ChessMove { start, end }
     }
 }
-
-
 #[derive(Clone, Copy)]
 enum Square {
     Empty,
     Occupied(Piece),
     //Location,
 }
+
 
 struct Board{
     squares: [[Square; 8]; 8],
@@ -190,7 +185,6 @@ impl Board{
             );
         }
     }
-
     fn move_piece(&mut self, turn: u8) {
         let mut char_map: HashMap<char, usize> = HashMap::new();
         let mut num_map: HashMap<char, usize> = HashMap::new();
@@ -207,7 +201,7 @@ impl Board{
             std::io::stdin().read_line(&mut input).unwrap();
             let vec: Vec<&str> = input.split(',').collect();
 
-            if vec.len() == 2 {
+            if vec.len() == 2 && vec[0].trim().len() == 2 && vec[1].trim().len() == 2{ //two entries, each entry is 2 chars long, trim off newline i think??
                 let start = vec[0].trim();
                 let end = vec[1].trim();
 
@@ -217,10 +211,18 @@ impl Board{
                     char_map.get(&end.chars().nth(0).unwrap()),
                     num_map.get(&end.chars().nth(1).unwrap())) {
                     //if self.squares[from_x][from_y]::occupied(Color::White){
-                        let hold_piece = self.squares[from_x][from_y];
-                        self.squares[from_x][from_y] = Square::Empty;
-                        self.squares[to_x][to_y] = hold_piece;
-                        break;
+                        match self.check_legality(turn, from_x, from_y, to_x, to_y) {
+                            Ok(_) => {
+                                let hold_piece = self.squares[from_x][from_y];
+                                self.squares[from_x][from_y] = Square::Empty;
+                                self.squares[to_x][to_y] = hold_piece;
+                                break;
+                            }
+                            Err(e) => {
+                                println!("{}", e);
+                            }
+                        }
+                        
                     //}
                     
                 }
@@ -228,15 +230,58 @@ impl Board{
             println!("Expected a start and stop e.g. d3,f6");
         }
     }
+
+    fn check_legality(&mut self, turn: u8, from_x: usize, from_y: usize, to_x: usize, to_y: usize) -> Result<&'static str, &'static str> {
+        let whos_turn = turn % 2;
+        let mut turn_color = Color::Black;
+        let mut not_turn_color = Color::White;
+        match whos_turn{
+            0 => {
+                turn_color = Color::Black;
+                not_turn_color = Color::White;
+            },
+            _ => {
+                turn_color = Color::White;
+                not_turn_color = Color::Black;
+            },
+        }
+        let mut piece_color = Color::Black;
+        match self.squares[from_x][from_y] {
+            Square::Occupied(piece) => {
+                piece_color = piece.color;
+            },
+            Square::Empty => {
+    
+            }
+        }
+        println!("the turn is {}, the mod is {}, the turn color is {}, and the selected piece is {}", turn, whos_turn, turn_color, piece_color);
+    
+        match self.squares[from_x][from_y]{
+            Square::Empty => {return Err("there is nothing in that square");},
+            Square::Occupied(piece) => {
+                if piece.color == turn_color {
+                    println!("the piece color is {} and the turn color is {}, they match!", piece.color, turn_color);
+                } else {
+                    return Err("that's not your color!");
+                }
+            }
+        }
+    
+        if true {
+            Ok("Good move")
+        } else {
+            Err("Bad move")
+        }
+    }
+    
+
 }
-
-
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut s = String::new();
         for y in 0..8 {
-            s += &format!("{}", 8 - y);
+            s += &format!("{}", y+1);
             for x in 0..8 {
                 let square = self.squares[x][y];
                 s += "|";
@@ -276,27 +321,22 @@ impl fmt::Display for Board {
         write!(f, "{}", s)
     }
 }
-
-/*
-struct ChessMove {
-    start:  String,
-    end:    String,
-}
-
-impl ChessMove {
-    fn from(start: String, end: String) ->Self {
-        ChessMove { start, end }
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let mut s = String::new();
+        match self {
+            Color::White => s += "white",
+            Color::Black => s += "black",
+        }
+        write!(f, "{}", s)
     }
 }
-*/
 
 fn main() {
     game();
-
 }
 
 fn game() {
-
     let mut b = Board::empty_board();
     b.set_board();
     let mut turn: u8 = 1;
@@ -318,28 +358,3 @@ fn game() {
     
 }
 
-fn get_move() -> ChessMove {
-    println!("]\n");
-    loop {
-        println!("enter move");
-        io::stdout().flush().unwrap();
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("Failed to read line");
-        let vec: Vec<&str> = input.split(",").collect();
-
-        // i want to use match here to get chess moves, we'll see
-        if vec.len() == 2 {
-            if let Ok(start) = vec[0].trim().parse::<String>() {
-                if let Ok(end) = vec[1].trim().parse::<String>() {
-                    if end.len() == 2 && start.len() == 2{
-                        return ChessMove::from(start, end);
-                    } else { println!("only 2 letters you goomba!");}
-                }
-            }
-        } else {
-            println!("Expected a start and stop e.g. d3,f6");
-        }
-    }
-}
