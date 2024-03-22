@@ -1,6 +1,7 @@
 use std::fmt;
 use std::io;
 use std::io::Write;
+use std::collections::HashMap;
 //use std::ops::Index;
 //use std::ops::IndexMut;
 
@@ -190,14 +191,52 @@ impl Board{
         }
     }
 
+    fn move_piece(&mut self, turn: u8) {
+        let mut char_map: HashMap<char, usize> = HashMap::new();
+        let mut num_map: HashMap<char, usize> = HashMap::new();
+        for (i, c) in ('a'..'i').enumerate() {
+            char_map.insert(c, i);
+        }
+        for (i, c) in ('1'..'9').enumerate() {
+            num_map.insert(c, i);
+        }
+
+        loop {
+            println!("Enter move:");
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input).unwrap();
+            let vec: Vec<&str> = input.split(',').collect();
+
+            if vec.len() == 2 {
+                let start = vec[0].trim();
+                let end = vec[1].trim();
+
+                if let (Some(&from_x), Some(&from_y), Some(&to_x), Some(&to_y)) =
+                    (char_map.get(&start.chars().nth(0).unwrap()),
+                    num_map.get(&start.chars().nth(1).unwrap()),
+                    char_map.get(&end.chars().nth(0).unwrap()),
+                    num_map.get(&end.chars().nth(1).unwrap())) {
+                    //if self.squares[from_x][from_y]::occupied(Color::White){
+                        let hold_piece = self.squares[from_x][from_y];
+                        self.squares[from_x][from_y] = Square::Empty;
+                        self.squares[to_x][to_y] = hold_piece;
+                        break;
+                    //}
+                    
+                }
+            }
+            println!("Expected a start and stop e.g. d3,f6");
+        }
+    }
 }
+
 
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let mut s = String::new();
         for y in 0..8 {
-            s += &format!("{}", y + 1);
+            s += &format!("{}", 8 - y);
             for x in 0..8 {
                 let square = self.squares[x][y];
                 s += "|";
@@ -260,7 +299,7 @@ fn game() {
 
     let mut b = Board::empty_board();
     b.set_board();
-    let mut turn = 1;
+    let mut turn: u8 = 1;
     loop{
         println!("{}", b);
         let whos_turn = turn % 2;
@@ -271,7 +310,8 @@ fn game() {
 
         }
         println!("{} to move!", turn_color);
-        let chess_move = get_move();
+        //let chess_move = get_move();
+        Board::move_piece(&mut b, turn);
         
         turn += 1;
     }
